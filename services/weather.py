@@ -1,6 +1,6 @@
 import requests
 
-# Servicio de clima usando OpenWeatherMap
+# Servicio de clima usando OpenWeatherMap 
 def obtener_clima(ciudad: str, api_key: str) -> dict:
     url = f'https://api.openweathermap.org/data/2.5/weather'
     params = {'q': ciudad, 'appid': api_key, 'units': 'metric', 'lang': 'es'}
