@@ -1,5 +1,6 @@
 import requests
 
+# Servicio de clima usando OpenWeatherMap
 def obtener_clima(ciudad: str, api_key: str) -> dict:
     url = f'https://api.openweathermap.org/data/2.5/weather'
     params = {'q': ciudad, 'appid': api_key, 'units': 'metric', 'lang': 'es'}
@@ -13,4 +14,4 @@ def formatear_clima(datos: dict) -> str:
     temp = datos['main']['temp']
     descripcion = datos['weather'][0]['description']
     humedad = datos['main']['humidity']
-    return f'{nombre}: {temp}°C, {descripcion}, humedad {humedad}%'
+    return f'{nombre}: {temp}°C, {descripcion}, humedad {humedad}%'S
