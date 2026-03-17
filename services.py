@@ -13,9 +13,13 @@ class ServiceManager:
     """Handles start/stop lifecycle for all services in background threads."""
 
     def __init__(self, log_fn: Callable[[str], None]) -> None:
+        # log_fn es la función que escribe mensajes en el cuadro de logs de la UI
         self._log = log_fn
+        # Referencia al proceso de ngrok para poder terminarlo después
         self._ngrok_proc: Optional[subprocess.Popen] = None
+        # URL pública que ngrok asigna (se actualiza al iniciar)
         self.ngrok_url: Optional[str] = None
+        # Lock para evitar condiciones de carrera al acceder al proceso de ngrok
         self._lock = threading.Lock()
 
     # ── Public API ────────────────────────────────────────────────────────────
@@ -26,6 +30,7 @@ class ServiceManager:
         status_fn: Callable[[str, str], None],
         done_fn: Callable[[bool], None],
     ) -> None:
+        # Se lanza en un hilo daemon para no bloquear la UI mientras arranca todo
         threading.Thread(
             target=self._run_start,
             args=(config, status_fn, done_fn),
@@ -208,12 +213,14 @@ class ServiceManager:
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _wait_for_n8n(self, port: int, timeout: int = 120) -> bool:
+        # Hace polling al endpoint /healthz hasta que n8n responda o se agote el tiempo
         deadline = time.time() + timeout
         while time.time() < deadline:
             try:
                 r = requests.get(
                     f"http://localhost:{port}/healthz", timeout=3
                 )
+                # Cualquier respuesta que no sea error de servidor (5xx) indica que está listo
                 if r.status_code < 500:
                     return True
             except Exception:
@@ -222,15 +229,18 @@ class ServiceManager:
         return False
 
     def _fetch_ngrok_url(self, retries: int = 12) -> Optional[str]:
+        # ngrok expone una API local en el puerto 4040 con info de los túneles activos
         for _ in range(retries):
             try:
                 r = requests.get(
                     "http://localhost:4040/api/tunnels", timeout=3
                 )
                 tunnels = r.json().get("tunnels", [])
+                # Preferir el túnel HTTPS si existe
                 for t in tunnels:
                     if t.get("proto") == "https":
                         return t["public_url"]
+                # Fallback al primer túnel disponible si no hay HTTPS
                 if tunnels:
                     return tunnels[0]["public_url"]
             except Exception:

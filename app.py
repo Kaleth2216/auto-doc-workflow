@@ -349,11 +349,15 @@ class App(ctk.CTk):
         ts = datetime.datetime.now().strftime("%H:%M:%S")
 
         def _do() -> None:
+            # El textbox debe habilitarse temporalmente para insertar texto
             self._log_box.configure(state="normal")
             self._log_box.insert("end", f"[{ts}] {msg}\n")
+            # Desplaza automáticamente al final para mostrar el último mensaje
             self._log_box.see("end")
             self._log_box.configure(state="disabled")
 
+        # self.after(0) envía la actualización al hilo principal de Tkinter
+        # (necesario porque los logs se generan desde hilos secundarios)
         self.after(0, _do)
 
     def _clear_logs(self) -> None:
@@ -392,6 +396,7 @@ class App(ctk.CTk):
         if self._busy:
             return
         self._set_busy(True)
+        # Se agrega el token de GitHub al config en memoria (nunca se guarda en disco)
         cfg = {**self._cfg, "github_token": get_github_token()}
         self._svc.start_all(cfg, self._set_status, self._on_start_done)
 
