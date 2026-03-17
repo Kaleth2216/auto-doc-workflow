@@ -1,5 +1,6 @@
 import requests
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 
 BASE_URL = 'https://api.openweathermap.org/data/2.5'
 _cache = {}
@@ -66,6 +67,27 @@ def obtener_resumen(ciudad: str, api_key: str) -> str:
     """Obtiene y formatea el clima actual en una sola llamada."""
     datos = obtener_clima(ciudad, api_key)
     return formatear_clima(datos)
+
+def obtener_clima_multiple(ciudades: list[str], api_key: str) -> dict[str, dict]:
+    """Obtiene el clima de múltiples ciudades en paralelo."""
+    def _fetch(ciudad):
+        try:
+            return ciudad, obtener_clima(ciudad, api_key)
+        except ClimaError as e:
+            return ciudad, {'error': str(e)}
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        resultados = executor.map(_fetch, ciudades)
+
+    return dict(resultados)
+
+def resumen_multiple(ciudades: list[str], api_key: str) -> list[str]:
+    """Retorna resúmenes formateados de múltiples ciudades."""
+    climas = obtener_clima_multiple(ciudades, api_key)
+    return [
+        formatear_clima(datos) if 'error' not in datos else f"{ciudad}: error al obtener clima"
+        for ciudad, datos in climas.items()
+    ]
 
 def limpiar_cache() -> None:
     """Limpia todo el caché manualmente."""
