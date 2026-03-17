@@ -1,0 +1,240 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "github-push",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -224,
+        -128
+      ],
+      "id": "5bf746a7-ed13-4ba4-b29b-2d2815ddc28a",
+      "name": "Webhook",
+      "webhookId": "0be5930d-7bda-433b-ba2f-4297eda90ff4"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/Kaleth2216/auto-doc-workflow/commits/{{ $('Webhook').item.json.body.after }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "token YOUR_GITHUB_TOKEN_HERE"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        192,
+        -128
+      ],
+      "id": "9f5393d4-8cf3-46ca-bffe-a35b122e0f29",
+      "name": "Obtener Diff"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/repos/Kaleth2216/auto-doc-workflow/contents/README.md",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "token YOUR_GITHUB_TOKEN_HERE"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -16,
+        -128
+      ],
+      "id": "9a488967-aa4a-447b-a771-5e37f5c21a70",
+      "name": "Obtener README"
+    },
+    {
+      "parameters": {
+        "jsCode": "const readmeBase64 = $('Obtener README').item.json.content;\nconst readme = Buffer.from(readmeBase64, 'base64').toString('utf-8');\nconst diff = $('Obtener Diff').item.json.files[0].patch;\n\nconst prompt = `Eres un experto en documentación de software. Generas documentación profesional en markdown.\n\nEste es el README actual del proyecto:\n${readme}\n\nSe hicieron estos cambios nuevos:\n${diff}\n\nActualiza el README siguiendo EXACTAMENTE este estilo y estructura:\n\n1. Título del proyecto con descripción breve en una línea\n2. Línea divisoria ---\n3. Secciones con ## y títulos descriptivos\n4. Tablas markdown para: stack tecnológico, scripts, rutas, funciones, parámetros\n5. Bloques de código con el lenguaje especificado para ejemplos\n6. Citas con > para advertencias o notas importantes\n7. Listas con - para elementos relacionados\n8. Cada función documentada en tabla con columnas: Función, Descripción, Retorno\n9. Cada parámetro documentado en tabla con columnas: Parámetro, Tipo, Descripción\n\nReglas:\n- Sin emojis\n- Sin logs de cambios, solo documentación del estado actual\n- Si es función nueva agrégala a la tabla correspondiente\n- Si es módulo nuevo crea una sección nueva con su tabla\n- Mantén todo el contenido existente que siga siendo válido\n- Responde SOLO con el contenido markdown, sin explicaciones adicionales.`;\n\nreturn {\n  json: {\n    model: \"llama3.2\",\n    stream: false,\n    prompt: prompt\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        -128
+      ],
+      "id": "9295cd44-1630-4c58-b067-7024ca69c460",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        608,
+        -128
+      ],
+      "id": "5d9971a9-036e-4e0f-99ae-dc6ee6585eb9",
+      "name": "Enviar a Ollama"
+    },
+    {
+      "parameters": {
+        "jsCode": "const nuevoReadme = $('Enviar a Ollama').item.json.response;\nconst contenidoBase64 = Buffer.from(nuevoReadme).toString('base64');\nconst shaActual = $('Obtener README').item.json.sha;\n\nreturn {\n  json: {\n    contenidoBase64: contenidoBase64,\n    shaActual: shaActual\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        -128
+      ],
+      "id": "e6c1a97e-3bc1-46df-9f4d-835c1b8c6499",
+      "name": "Preparar README"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "https://api.github.com/repos/Kaleth2216/auto-doc-workflow/contents/README.md",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "token YOUR_GITHUB_TOKEN_HERE"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.github.v3+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": \"docs: auto-documentación generada por n8n + Ollama\",\n  \"content\": \"{{ $json.contenidoBase64 }}\",\n  \"sha\": \"{{ $json.shaActual }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1024,
+        -128
+      ],
+      "id": "ce20023d-389c-41b0-b8d6-fecb1692a9d3",
+      "name": "Actualizar README"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Obtener README",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Diff": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener README": {
+      "main": [
+        [
+          {
+            "node": "Obtener Diff",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Ollama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar a Ollama": {
+      "main": [
+        [
+          {
+            "node": "Preparar README",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar README": {
+      "main": [
+        [
+          {
+            "node": "Actualizar README",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "b66722a2-b1b0-49a9-8e65-6cf9408f9f81",
+  "meta": {
+    "instanceId": "4a6c88563d1a0c875462a73bac0672dc9efe6dca79a33fd334905069d9d7e203"
+  },
+  "id": "E0tkufIuj1kKPGdw",
+  "tags": []
+}
