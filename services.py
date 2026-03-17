@@ -258,20 +258,25 @@ class ServiceManager:
         try:
             if webhook_id:
                 # Use the known webhook ID directly — no listing needed
-                self._log(f"   Usando webhook ID: {webhook_id}")
+                patch_url = f"{api}/{webhook_id}"
+                self._log(f"   PATCH {patch_url}")
                 r = requests.patch(
-                    f"{api}/{webhook_id}", json=payload, headers=headers, timeout=10
+                    patch_url, json=payload, headers=headers, timeout=10
                 )
             else:
+                self._log(f"   GET {api}")
                 hooks_r = requests.get(api, headers=headers, timeout=10)
                 hooks_r.raise_for_status()
                 hooks = hooks_r.json()
                 if hooks:
                     hook_id = hooks[0]["id"]
+                    patch_url = f"{api}/{hook_id}"
+                    self._log(f"   PATCH {patch_url}")
                     r = requests.patch(
-                        f"{api}/{hook_id}", json=payload, headers=headers, timeout=10
+                        patch_url, json=payload, headers=headers, timeout=10
                     )
                 else:
+                    self._log(f"   POST {api}")
                     payload["name"] = "web"
                     payload["events"] = ["push"]
                     r = requests.post(api, json=payload, headers=headers, timeout=10)

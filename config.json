@@ -1,0 +1,8 @@
+{
+  "repo_url": "Kaleth2216/auto-doc-workflow",
+  "ollama_model": "llama3.2",
+  "n8n_port": 5678,
+  "n8n_api_key": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxZDMyYjk5My03NzczLTQ0MDEtYjExYy02YjcwOTJkOTE2YmIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiNTZkMGJlNDUtMmE0Yy00OTk4LTljNjUtNTU5ZGRlYjM0NDBmIiwiaWF0IjoxNzczNzM3ODcwLCJleHAiOjE3ODE0OTYwMDB9.2l1p3czmXXIa5ECfbMszITc9vPiTg_bM2AY1CoWx6DU",
+  "github_webhook_id": "",
+  "docker_compose_dir": "C:\\Users\\calet\\OneDrive\\Documents\\Proyectos_personales\\auto-doc-workflow"
+}
